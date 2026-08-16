@@ -34,28 +34,36 @@ import (
 )
 
 func main() {
-    var items, errors uint64 // атомарные счетчики
-    bar := progress.New(
-        500*time.Millisecond, // интервал обновления
-        "Loading",            // описание
-        20,                   // длина шкалы
-        100,                  // всего элементов
-        true,                 // показывать ETA
-        true,                 // показывать скорость
-        true,                 // оставить прогресс после завершения
-    )
+    var (
+        items, errors uint64 // атомарные счетчики
+        wgBar         sync.WaitGroup // ждун
+        bar = progress.New(
+            500*time.Millisecond, // интервал обновления
+            "Loading",            // описание
+            20,                   // длина шкалы
+            100,                  // всего элементов
+            true,                 // показывать ETA
+            true,                 // показывать скорость
+            true,                 // оставить прогресс после завершения
+        )
+        ctxBar, cancelBar = context.WithCancel(context.Background())
+    ) 
+    wgBar.Add(1) 
+    go func() {
+        defer wgBar.Done()
+        bar.Show(ctxBar, &total, &totalErrors)
+    }()
 
-    ctx, cancel := context.WithCancel(context.Background())
     go func() {
         // Симуляция работы
         for i := 0; i < 100; i++ {
             atomic.AddUint64(&items, 1)
             time.Sleep(100 * time.Millisecond)
         }
-        cancel()
     }()
 
-    go bar.Show(ctx, &items, &errors)
+    cancelBar()
+    wgBar.Wait()
 }
 ```
 

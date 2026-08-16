@@ -41,21 +41,21 @@ func New(
 // Show запускает периодический вывод прогресса выполнения.
 // Параметры:
 //   - ctx    – контекст для управления завершением.
-//   - items  – указатель на атомарный счётчик обработанных элементов (не должен быть nil).
+//   - done   – указатель на атомарный счётчик обработанных элементов (не должен быть nil).
 //   - errors – указатель на атомарный счётчик ошибок (может быть nil, тогда ошибки не выводятся).
-func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
+func (b *Bar) Show(ctx context.Context, done, errors *uint64) {
 	ticker := time.NewTicker(b.Interval)
 	defer ticker.Stop()
 
-	prevItems := atomic.LoadUint64(items)
+	prevDone := atomic.LoadUint64(done)
 	prevTime := time.Now()
 
 	defer func() {
 		if !b.Leave {
 			fmt.Fprint(os.Stdout, "\033[2K\r") // стираем строку
 		} else {
-			b.print(items, errors, prevItems, prevTime) // выводим заполненный прогресс
-			fmt.Fprint(os.Stdout, "\n")                 // переходим на новую строку
+			b.print(done, errors, prevDone, prevTime) // выводим заполненный прогресс
+			fmt.Fprint(os.Stdout, "\n")               // переходим на новую строку
 		}
 	}()
 
@@ -65,27 +65,27 @@ func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			b.print(items, errors, prevItems, prevTime)
+			b.print(done, errors, prevDone, prevTime)
 			// обновляем предыдущие значения после вывода
-			prevItems = atomic.LoadUint64(items)
+			prevDone = atomic.LoadUint64(done)
 			prevTime = time.Now()
 		}
 	}
 }
 
 // print формирует и выводит строку прогресса.
-func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time) {
+func (b *Bar) print(done, errors *uint64, prevDone uint64, prevTime time.Time) {
 	now := time.Now()
-	itms := atomic.LoadUint64(items)
+	dn := atomic.LoadUint64(done)
 
 	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
 	var line string = fmt.Sprintf("\033[2K\r%s ", b.Description)
 
 	if b.Total > 0 {
-		percent := float64(itms) / float64(b.Total)
-		line += fmt.Sprintf("%3.0f%% %s %d/%d ", percent*100, b.getLoad(percent), itms, b.Total)
+		percent := float64(dn) / float64(b.Total)
+		line += fmt.Sprintf("%3.0f%% %s %d/%d ", percent*100, b.getLoad(percent), dn, b.Total)
 	} else {
-		line += fmt.Sprintf("%d ", itms)
+		line += fmt.Sprintf("%d ", dn)
 	}
 
 	// Счётчик ошибок
@@ -94,22 +94,22 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 	}
 
 	// ETA (оценочное время до завершения)
-	if b.ShowETA && b.Total > 0 && itms > 0 && itms < b.Total {
+	if b.ShowETA && b.Total > 0 && dn > 0 && dn < b.Total {
 		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 && itms > prevItems {
-			rate := float64(itms-prevItems) / elapsed
+		if elapsed > 0 && dn > prevDone {
+			rate := float64(dn-prevDone) / elapsed
 			if rate > 0 {
-				remaining := float64(b.Total-itms) / rate
+				remaining := float64(b.Total-dn) / rate
 				line += fmt.Sprintf("⏰ %s ", formatDuration(time.Duration(remaining*float64(time.Second))))
 			}
 		}
 	}
 
-	// Скорость (items/sec)
+	// Скорость (it/sec)
 	if b.ShowSpeed {
 		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 && itms > prevItems {
-			speed := float64(itms-prevItems) / elapsed
+		if elapsed > 0 && dn > prevDone {
+			speed := float64(dn-prevDone) / elapsed
 			line += fmt.Sprintf("⚡️ %.1f it/s ", speed)
 		}
 	}
