@@ -72,10 +72,6 @@ func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, prevTime time.Time) {
 	now := time.Now()
 	itms := atomic.LoadUint64(items)
-	errs := uint64(0)
-	if errors != nil {
-		errs = atomic.LoadUint64(errors)
-	}
 
 	var line string = fmt.Sprintf("\r%s ", b.Description)
 
@@ -85,6 +81,11 @@ func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, p
 		line += fmt.Sprintf("%s %d / %d (%.1f%%)", load, itms, b.Total, percent*100)
 	} else {
 		line += fmt.Sprintf("%d", itms)
+	}
+
+	// Счётчики успехов и ошибок
+	if errors != nil {
+		line += fmt.Sprintf(" | ❌ %d", atomic.LoadUint64(errors))
 	}
 
 	// Скорость (items/sec)
@@ -108,11 +109,6 @@ func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, p
 		}
 	}
 
-	// Счётчики успехов и ошибок
-	if errors != nil {
-		line += fmt.Sprintf(" | ❌ %d", errs)
-	}
-
 	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
 	line = "\033[2K" + line
 
@@ -124,8 +120,9 @@ func (b *Bar) getLoad(percent float64) string {
 	if b.Length == 0 {
 		return ""
 	}
-	length := int(percent * float64(b.Length))
-	return "|" + strings.Repeat("-", length) + "|"
+	done := int(percent * float64(b.Length))
+	extra := int(b.Length) - done
+	return "|" + strings.Repeat("-", done) + strings.Repeat(" ", extra) + "|"
 }
 
 // formatDuration форматирует длительность в удобочитаемый вид.
