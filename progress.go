@@ -17,6 +17,7 @@ type Bar struct {
 	Total       uint64        // Общее количество единиц работы (0 – неизвестно)
 	ShowETA     bool          // Показывать оценочное время до завершения
 	ShowSpeed   bool          // Показывать скорость обработки (шт/сек)
+	// TODO: add saveProgress bool
 }
 
 func New(
@@ -91,7 +92,7 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 			rate := float64(itms-prevItems) / elapsed
 			if rate > 0 {
 				remaining := float64(b.Total-itms) / rate
-				line += fmt.Sprintf("⏱️ %s ", formatDuration(time.Duration(remaining*float64(time.Second))))
+				line += fmt.Sprintf("⏰ %s ", formatDuration(time.Duration(remaining*float64(time.Second))))
 			}
 		}
 	}
