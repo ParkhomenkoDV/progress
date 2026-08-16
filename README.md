@@ -22,6 +22,7 @@ go get github.com/ParkhomenkoDV/progress
 | `ShowSpeed`  | `bool`          | Показывать скорость обработки (шт/с).                   |
 | `Leave`      | `bool`          | Оставить прогресс полсе завершения.                     |
 
+### Auto
 ```go
 package main
 
@@ -35,7 +36,36 @@ import (
 
 func main() {
     var (
-        items, errors uint64 // атомарные счетчики
+        done, errors uint64 // атомарные счетчики
+        bar = progress.New(1*time.Second, "Loading", 50, 100, true, true, true)
+    ) 
+    defer bar.Start(context.Background(), &done, &errors)()
+
+    go func() {
+        // Симуляция работы
+        for i := 0; i < 100; i++ {
+            atomic.AddUint64(&done, 1)
+            time.Sleep(100 * time.Millisecond)
+        }
+    }()
+}
+```
+
+### Manual
+```go
+package main
+
+import (
+    "context"
+    "sync/atomic"
+    "time"
+    
+    "github.com/ParkhomenkoDV/progress"
+)
+
+func main() {
+    var (
+        done, errors uint64 // атомарные счетчики
         wgBar         sync.WaitGroup // ждун
         bar = progress.New(
             500*time.Millisecond, // интервал обновления
@@ -57,7 +87,7 @@ func main() {
     go func() {
         // Симуляция работы
         for i := 0; i < 100; i++ {
-            atomic.AddUint64(&items, 1)
+            atomic.AddUint64(&done, 1)
             time.Sleep(100 * time.Millisecond)
         }
     }()

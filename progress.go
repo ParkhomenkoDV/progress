@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -35,6 +36,22 @@ func New(
 		ShowETA:     showETA,
 		ShowSpeed:   showSpeed,
 		Leave:       leave,
+	}
+}
+
+// Start запускает прогресс-бар в фоне.
+// Возвращает функцию stop, которую нужно вызвать по окончании работы.
+func (b *Bar) Start(ctx context.Context, done, errors *uint64) (stop func()) {
+	ctx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		b.Show(ctx, done, errors)
+	}()
+	return func() {
+		cancel()
+		wg.Wait()
 	}
 }
 
