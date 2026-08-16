@@ -74,7 +74,7 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 
 	if b.Total > 0 {
 		percent := float64(itms) / float64(b.Total)
-		line += fmt.Sprintf("%.0f%% %s %d/%d ", percent*100, b.getLoad(percent), itms, b.Total)
+		line += fmt.Sprintf("%3.0f%% %s %d/%d ", percent*100, b.getLoad(percent), itms, b.Total)
 	} else {
 		line += fmt.Sprintf("%d ", itms)
 	}
