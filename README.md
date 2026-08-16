@@ -10,7 +10,7 @@ go get github.com/ParkhomenkoDV/progress
 
 ## Usage
 
-## Поля структуры `Bar`
+### Fields
 
 | Поле         | Тип             | Описание                                                |
 |--------------|-----------------|---------------------------------------------------------|
@@ -34,15 +34,15 @@ import (
 )
 
 func main() {
-    var items, errors uint64
+    var items, errors uint64 // атомарные счетчики
     bar := progress.New(
         500*time.Millisecond, // интервал обновления
-        "Loading",          // описание
+        "Loading",            // описание
         20,                   // длина шкалы
         100,                  // всего элементов
         true,                 // показывать ETA
         true,                 // показывать скорость
-        false,                // оставить прогресс после завершения
+        true,                 // оставить прогресс после завершения
     )
 
     ctx, cancel := context.WithCancel(context.Background())
@@ -59,12 +59,12 @@ func main() {
 }
 ```
 
-## Пример работы
+## Result
 
 ```
-Обработка 100% |----------| 100/100 ❌ 0
+Loading 100% |-------   | 69/100 ❌ 0 ⏰ 0h3m15s ⚡️ 100.0 it/s 
 ```
 
-## Лицензия
+## License
 
 MIT
