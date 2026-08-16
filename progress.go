@@ -15,8 +15,8 @@ type Bar struct {
 	Description string        // Описание
 	Length      uint8         // Длина окна (0 - не отображать)
 	Total       uint64        // Общее количество единиц работы (0 – неизвестно)
-	ShowSpeed   bool          // Показывать скорость обработки (шт/сек)
 	ShowETA     bool          // Показывать оценочное время до завершения
+	ShowSpeed   bool          // Показывать скорость обработки (шт/сек)
 }
 
 func New(
@@ -31,8 +31,8 @@ func New(
 		Description: description,
 		Length:      length,
 		Total:       total,
-		ShowSpeed:   showSpeed,
 		ShowETA:     showETA,
+		ShowSpeed:   showSpeed,
 	}
 }
 
@@ -69,14 +69,12 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 	now := time.Now()
 	itms := atomic.LoadUint64(items)
 
-	var line string = fmt.Sprintf("\r%s ", b.Description)
+	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
+	var line string = fmt.Sprintf("\033[2K\r%s ", b.Description)
 
 	if b.Total > 0 {
 		percent := float64(itms) / float64(b.Total)
-		if b.Length > 0 {
-			line += fmt.Sprintf("%s ", b.getLoad(percent))
-		}
-		line += fmt.Sprintf("%d / %d (%.1f%%)", itms, b.Total, percent*100)
+		line += fmt.Sprintf("%.0f%% %s %d/%d ", percent*100, b.getLoad(percent), itms, b.Total)
 	} else {
 		line += fmt.Sprintf("%d", itms)
 	}
@@ -84,15 +82,6 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 	// Счётчик ошибок
 	if errors != nil {
 		line += fmt.Sprintf(" | ❌ %d", atomic.LoadUint64(errors))
-	}
-
-	// Скорость (items/sec)
-	if b.ShowSpeed {
-		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 && itms > prevItems {
-			speed := float64(itms-prevItems) / elapsed
-			line += fmt.Sprintf(" | %.1f it/s", speed)
-		}
 	}
 
 	// ETA (оценочное время до завершения)
@@ -107,10 +96,16 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 		}
 	}
 
-	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
-	line = "\033[2K" + line
+	// Скорость (items/sec)
+	if b.ShowSpeed {
+		elapsed := now.Sub(prevTime).Seconds()
+		if elapsed > 0 && itms > prevItems {
+			speed := float64(itms-prevItems) / elapsed
+			line += fmt.Sprintf(" | %.1f it/s", speed)
+		}
+	}
 
-	fmt.Fprint(os.Stdout, line) // Запись в буферизованный writer.
+	fmt.Fprint(os.Stdout, line)
 }
 
 func (b *Bar) getLoad(percent float64) string {
