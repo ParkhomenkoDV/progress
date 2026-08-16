@@ -22,7 +22,6 @@ func TestPrintProgress(t *testing.T) {
 		name       string
 		bar        *Bar
 		itemsVal   uint64
-		successVal uint64
 		errorsVal  uint64
 		prevItems  uint64
 		prevTime   time.Time
@@ -37,7 +36,6 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:     false,
 			},
 			itemsVal:   42,
-			successVal: 0,
 			errorsVal:  0,
 			prevItems:  0,
 			prevTime:   time.Now().Add(-time.Second),
@@ -51,7 +49,6 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:   false,
 			},
 			itemsVal:   30,
-			successVal: 0,
 			errorsVal:  0,
 			prevItems:  20,
 			prevTime:   time.Now().Add(-time.Second),
@@ -65,7 +62,6 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:   false,
 			},
 			itemsVal:   50,
-			successVal: 0,
 			errorsVal:  0,
 			prevItems:  40,
 			prevTime:   time.Now().Add(-500 * time.Millisecond), // разница 0.5 сек -> 20 шт/с
@@ -79,7 +75,6 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:   true,
 			},
 			itemsVal:   60,
-			successVal: 0,
 			errorsVal:  0,
 			prevItems:  50,
 			prevTime:   time.Now().Add(-2 * time.Second), // 5 шт/с, осталось 40 -> 8 сек
@@ -93,11 +88,10 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:   false,
 			},
 			itemsVal:   70,
-			successVal: 65,
 			errorsVal:  5,
 			prevItems:  60,
 			prevTime:   time.Now().Add(-time.Second),
-			wantSubstr: []string{"70 / 100", "70.0%", "✅ 65", "❌ 5"},
+			wantSubstr: []string{"70 / 100", "70.0%", "❌ 5"},
 		},
 		{
 			name: "все опции включены",
@@ -107,26 +101,24 @@ func TestPrintProgress(t *testing.T) {
 				ShowETA:   true,
 			},
 			itemsVal:   120,
-			successVal: 110,
 			errorsVal:  10,
 			prevItems:  100,
 			prevTime:   time.Now().Add(-time.Second),
-			wantSubstr: []string{"120 / 200", "60.0%", "шт/с", "ETA:", "✅ 110", "❌ 10"},
+			wantSubstr: []string{"120 / 200", "60.0%", "шт/с", "ETA:", "❌ 10"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var items, success, errors uint64
+			var items, errors uint64
 			atomic.StoreUint64(&items, tt.itemsVal)
-			atomic.StoreUint64(&success, tt.successVal)
 			atomic.StoreUint64(&errors, tt.errorsVal)
 
 			var buf bytes.Buffer
 			bw := bufio.NewWriter(&buf)
 
 			// Вызываем printProgress с подготовленными параметрами
-			tt.bar.printProgress(bw, &items, &success, &errors, tt.prevItems, tt.prevTime)
+			tt.bar.print(bw, &items, &errors, tt.prevItems, tt.prevTime)
 
 			// Принудительный flush (printProgress уже вызывает Flush, но на всякий случай)
 			bw.Flush()

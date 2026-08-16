@@ -6,28 +6,32 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
 
 type Bar struct {
-	Description string        // описание
-	Interval    time.Duration // частота обновления
-	Total       uint64        // общее количество единиц работы (0 – неизвестно)
-	ShowSpeed   bool          // показывать скорость обработки (шт/сек)
-	ShowETA     bool          // показывать оценочное время до завершения
+	Interval    time.Duration // Частота обновления
+	Description string        // Описание
+	Length      uint8         // Длина окна (0 - не отображать)
+	Total       uint64        // Общее количество единиц работы (0 – неизвестно)
+	ShowSpeed   bool          // Показывать скорость обработки (шт/сек)
+	ShowETA     bool          // Показывать оценочное время до завершения
 }
 
 func New(
-	description string,
 	interval time.Duration,
+	description string,
+	length uint8,
 	total uint64,
 	showSpeed, showETA bool,
 ) *Bar {
 	return &Bar{
-		Description: description,
-		Total:       total,
 		Interval:    interval.Abs(),
+		Description: description,
+		Length:      length,
+		Total:       total,
 		ShowSpeed:   showSpeed,
 		ShowETA:     showETA,
 	}
@@ -36,9 +40,8 @@ func New(
 // Show отображает прогресс в реальном времени.
 // Параметры:
 //   - items   – указатель на атомарный счётчик обработанных элементов
-//   - success – указатель на атомарный счётчик успешных операций (может быть nil)
 //   - errors  – указатель на атомарный счётчик ошибок (может быть nil)
-func (b *Bar) Show(ctx context.Context, items, success, errors *uint64) {
+func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 	ticker := time.NewTicker(b.Interval)
 	defer ticker.Stop()
 
@@ -57,7 +60,7 @@ func (b *Bar) Show(ctx context.Context, items, success, errors *uint64) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			b.printProgress(bw, items, success, errors, prevItems, prevTime)
+			b.print(bw, items, errors, prevItems, prevTime)
 			// обновляем предыдущие значения после вывода
 			prevItems = atomic.LoadUint64(items)
 			prevTime = time.Now()
@@ -65,43 +68,41 @@ func (b *Bar) Show(ctx context.Context, items, success, errors *uint64) {
 	}
 }
 
-// printProgress формирует и выводит строку прогресса.
-func (b *Bar) printProgress(bw *bufio.Writer, items, success, errors *uint64, prevItems uint64, prevTime time.Time) {
+// print формирует и выводит строку прогресса.
+func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, prevTime time.Time) {
 	now := time.Now()
-	req := atomic.LoadUint64(items)
-	succ, errs := uint64(0), uint64(0)
-
-	if success != nil {
-		succ = atomic.LoadUint64(success)
-	}
+	itms := atomic.LoadUint64(items)
+	errs := uint64(0)
 	if errors != nil {
 		errs = atomic.LoadUint64(errors)
 	}
 
-	var line string
+	var line string = fmt.Sprintf("\r%s ", b.Description)
+
 	if b.Total > 0 {
-		percent := float64(req) / float64(b.Total) * 100
-		line = fmt.Sprintf("\r%s %d / %d (%.1f%%)", b.Description, req, b.Total, percent)
+		percent := float64(itms) / float64(b.Total)
+		load := b.getLoad(percent)
+		line += fmt.Sprintf("%s %d / %d (%.1f%%)", load, itms, b.Total, percent*100)
 	} else {
-		line = fmt.Sprintf("\r%s %d", b.Description, req)
+		line += fmt.Sprintf("%d", itms)
 	}
 
 	// Скорость (items/sec)
 	if b.ShowSpeed {
 		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 && req > prevItems {
-			speed := float64(req-prevItems) / elapsed
+		if elapsed > 0 && itms > prevItems {
+			speed := float64(itms-prevItems) / elapsed
 			line += fmt.Sprintf(" | %.1f шт/с", speed)
 		}
 	}
 
 	// ETA (оценочное время до завершения)
-	if b.ShowETA && b.Total > 0 && req > 0 && req < b.Total {
+	if b.ShowETA && b.Total > 0 && itms > 0 && itms < b.Total {
 		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 && req > prevItems {
-			rate := float64(req-prevItems) / elapsed
+		if elapsed > 0 && itms > prevItems {
+			rate := float64(itms-prevItems) / elapsed
 			if rate > 0 {
-				remaining := float64(b.Total-req) / rate
+				remaining := float64(b.Total-itms) / rate
 				line += fmt.Sprintf(" | ETA: %s", formatDuration(time.Duration(remaining*float64(time.Second))))
 			}
 		}
@@ -109,9 +110,7 @@ func (b *Bar) printProgress(bw *bufio.Writer, items, success, errors *uint64, pr
 
 	// Счётчики успехов и ошибок
 	if errors != nil {
-		line += fmt.Sprintf(" | ✅ %d ❌ %d", succ, errs)
-	} else if success != nil {
-		line += fmt.Sprintf(" | ✅ %d", succ)
+		line += fmt.Sprintf(" | ❌ %d", errs)
 	}
 
 	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
@@ -119,6 +118,14 @@ func (b *Bar) printProgress(bw *bufio.Writer, items, success, errors *uint64, pr
 
 	fmt.Fprint(bw, line) // Запись в буферизованный writer.
 	bw.Flush()           // Немедленный вывод
+}
+
+func (b *Bar) getLoad(percent float64) string {
+	if b.Length == 0 {
+		return ""
+	}
+	length := int(percent * float64(b.Length))
+	return "|" + strings.Repeat("-", length) + "|"
 }
 
 // formatDuration форматирует длительность в удобочитаемый вид.

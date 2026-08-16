@@ -17,9 +17,8 @@ func BenchmarkPrintProgress(b *testing.B) {
 		ShowETA:   true,
 	}
 
-	var items, success, errors uint64
+	var items, errors uint64
 	atomic.StoreUint64(&items, 500)
-	atomic.StoreUint64(&success, 450)
 	atomic.StoreUint64(&errors, 50)
 
 	prevItems := uint64(400)
@@ -32,7 +31,7 @@ func BenchmarkPrintProgress(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Можно слегка изменять значения для большей реалистичности,
 		// но это не критично для бенчмарка.
-		bar.printProgress(bw, &items, &success, &errors, prevItems, prevTime)
+		bar.print(bw, &items, &errors, prevItems, prevTime)
 	}
 }
 
