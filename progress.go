@@ -42,6 +42,8 @@ func New(
 //   - items  – указатель на атомарный счётчик обработанных элементов (не должен быть nil).
 //   - errors – указатель на атомарный счётчик ошибок (может быть nil, тогда ошибки не выводятся).
 func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
+	defer fmt.Fprint(os.Stdout, "\033[2K\r")
+
 	ticker := time.NewTicker(b.Interval)
 	defer ticker.Stop()
 
