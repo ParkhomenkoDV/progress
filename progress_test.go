@@ -31,10 +31,10 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "без Total, без доп. опций",
 			bar: &Bar{
-				Total:      0,
-				ShowSpeed:  false,
-				ShowETA:    false,
-				ShowErrors: false,
+				Description: "⏳ Обработано:",
+				Total:       0,
+				ShowSpeed:   false,
+				ShowETA:     false,
 			},
 			itemsVal:   42,
 			successVal: 0,
@@ -46,10 +46,9 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "с Total и процентами",
 			bar: &Bar{
-				Total:      100,
-				ShowSpeed:  false,
-				ShowETA:    false,
-				ShowErrors: false,
+				Total:     100,
+				ShowSpeed: false,
+				ShowETA:   false,
 			},
 			itemsVal:   30,
 			successVal: 0,
@@ -61,10 +60,9 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "со скоростью",
 			bar: &Bar{
-				Total:      100,
-				ShowSpeed:  true,
-				ShowETA:    false,
-				ShowErrors: false,
+				Total:     100,
+				ShowSpeed: true,
+				ShowETA:   false,
 			},
 			itemsVal:   50,
 			successVal: 0,
@@ -76,10 +74,9 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "с ETA",
 			bar: &Bar{
-				Total:      100,
-				ShowSpeed:  false,
-				ShowETA:    true,
-				ShowErrors: false,
+				Total:     100,
+				ShowSpeed: false,
+				ShowETA:   true,
 			},
 			itemsVal:   60,
 			successVal: 0,
@@ -91,10 +88,9 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "с ошибками и успехами",
 			bar: &Bar{
-				Total:      100,
-				ShowSpeed:  false,
-				ShowETA:    false,
-				ShowErrors: true,
+				Total:     100,
+				ShowSpeed: false,
+				ShowETA:   false,
 			},
 			itemsVal:   70,
 			successVal: 65,
@@ -106,10 +102,9 @@ func TestPrintProgress(t *testing.T) {
 		{
 			name: "все опции включены",
 			bar: &Bar{
-				Total:      200,
-				ShowSpeed:  true,
-				ShowETA:    true,
-				ShowErrors: true,
+				Total:     200,
+				ShowSpeed: true,
+				ShowETA:   true,
 			},
 			itemsVal:   120,
 			successVal: 110,
@@ -141,7 +136,7 @@ func TestPrintProgress(t *testing.T) {
 			// Проверяем наличие всех ожидаемых подстрок
 			for _, sub := range tt.wantSubstr {
 				if !contains(output, sub) {
-					t.Errorf("вывод не содержит %q: %q", sub, output)
+					t.Errorf("вывод:%q не содержит:%q", output, sub)
 				}
 			}
 		})

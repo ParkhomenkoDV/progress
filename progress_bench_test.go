@@ -12,10 +12,9 @@ import (
 // Использует io.Discard для исключения накладных расходов на реальный вывод.
 func BenchmarkPrintProgress(b *testing.B) {
 	bar := &Bar{
-		Total:      1000,
-		ShowSpeed:  true,
-		ShowETA:    true,
-		ShowErrors: true,
+		Total:     1000,
+		ShowSpeed: true,
+		ShowETA:   true,
 	}
 
 	var items, success, errors uint64

@@ -16,14 +16,13 @@ type Bar struct {
 	Total       uint64        // общее количество единиц работы (0 – неизвестно)
 	ShowSpeed   bool          // показывать скорость обработки (шт/сек)
 	ShowETA     bool          // показывать оценочное время до завершения
-	ShowErrors  bool          // показывать счётчик ошибок (если передан)
 }
 
 func New(
 	description string,
 	interval time.Duration,
 	total uint64,
-	showSpeed, showETA, showErrors bool,
+	showSpeed, showETA bool,
 ) *Bar {
 	return &Bar{
 		Description: description,
@@ -31,7 +30,6 @@ func New(
 		Interval:    interval.Abs(),
 		ShowSpeed:   showSpeed,
 		ShowETA:     showETA,
-		ShowErrors:  showErrors,
 	}
 }
 
@@ -110,7 +108,7 @@ func (b *Bar) printProgress(bw *bufio.Writer, items, success, errors *uint64, pr
 	}
 
 	// Счётчики успехов и ошибок
-	if b.ShowErrors && errors != nil {
+	if errors != nil {
 		line += fmt.Sprintf(" | ✅ %d ❌ %d", succ, errs)
 	} else if success != nil {
 		line += fmt.Sprintf(" | ✅ %d", succ)
