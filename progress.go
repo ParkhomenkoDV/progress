@@ -76,12 +76,12 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 		percent := float64(itms) / float64(b.Total)
 		line += fmt.Sprintf("%.0f%% %s %d/%d ", percent*100, b.getLoad(percent), itms, b.Total)
 	} else {
-		line += fmt.Sprintf("%d", itms)
+		line += fmt.Sprintf("%d ", itms)
 	}
 
 	// Счётчик ошибок
 	if errors != nil {
-		line += fmt.Sprintf(" | ❌ %d", atomic.LoadUint64(errors))
+		line += fmt.Sprintf("❌ %d ", atomic.LoadUint64(errors))
 	}
 
 	// ETA (оценочное время до завершения)
@@ -91,7 +91,7 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 			rate := float64(itms-prevItems) / elapsed
 			if rate > 0 {
 				remaining := float64(b.Total-itms) / rate
-				line += fmt.Sprintf(" ⏱️ %s", formatDuration(time.Duration(remaining*float64(time.Second))))
+				line += fmt.Sprintf("⏱️ %s ", formatDuration(time.Duration(remaining*float64(time.Second))))
 			}
 		}
 	}
@@ -101,7 +101,7 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 		elapsed := now.Sub(prevTime).Seconds()
 		if elapsed > 0 && itms > prevItems {
 			speed := float64(itms-prevItems) / elapsed
-			line += fmt.Sprintf(" ⚡️ %.1f it/s", speed)
+			line += fmt.Sprintf("⚡️ %.1f it/s ", speed)
 		}
 	}
 
