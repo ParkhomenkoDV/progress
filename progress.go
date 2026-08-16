@@ -17,7 +17,7 @@ type Bar struct {
 	Total       uint64        // Общее количество единиц работы (0 – неизвестно)
 	ShowETA     bool          // Показывать оценочное время до завершения
 	ShowSpeed   bool          // Показывать скорость обработки (шт/сек)
-	// TODO: add saveProgress bool
+	Leave       bool          // Оставить прогресс после завершения
 }
 
 func New(
@@ -25,7 +25,7 @@ func New(
 	description string,
 	length uint8,
 	total uint64,
-	showSpeed, showETA bool,
+	showETA, showSpeed, leave bool,
 ) *Bar {
 	return &Bar{
 		Interval:    interval.Abs(),
@@ -34,6 +34,7 @@ func New(
 		Total:       total,
 		ShowETA:     showETA,
 		ShowSpeed:   showSpeed,
+		Leave:       leave,
 	}
 }
 
@@ -43,13 +44,20 @@ func New(
 //   - items  – указатель на атомарный счётчик обработанных элементов (не должен быть nil).
 //   - errors – указатель на атомарный счётчик ошибок (может быть nil, тогда ошибки не выводятся).
 func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
-	defer fmt.Fprint(os.Stdout, "\033[2K\r")
-
 	ticker := time.NewTicker(b.Interval)
 	defer ticker.Stop()
 
 	prevItems := atomic.LoadUint64(items)
 	prevTime := time.Now()
+
+	defer func() {
+		if !b.Leave {
+			fmt.Fprint(os.Stdout, "\033[2K\r") // стираем строку
+		} else {
+			b.print(items, errors, prevItems, prevTime) // выводим заполненный прогресс
+			fmt.Fprint(os.Stdout, "\n")                 // переходим на новую строку
+		}
+	}()
 
 	// Выводим прогресс
 	for {
@@ -109,6 +117,7 @@ func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time)
 	fmt.Fprint(os.Stdout, line)
 }
 
+// getLoad - получение линии загрузки.
 func (b *Bar) getLoad(percent float64) string {
 	if b.Length == 0 {
 		return ""

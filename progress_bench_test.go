@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// BenchmarkPrintProgress замеряет производительность printProgress.
+// BenchmarkBarPrint замеряет производительность printProgress.
 // Использует io.Discard для исключения накладных расходов на реальный вывод.
-func BenchmarkPrintProgress(b *testing.B) {
+func BenchmarkBarPrint(b *testing.B) {
 	bar := &Bar{
 		Total:     1000,
 		ShowSpeed: true,
