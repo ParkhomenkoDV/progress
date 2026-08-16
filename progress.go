@@ -1,7 +1,6 @@
 package progress
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -37,22 +36,17 @@ func New(
 	}
 }
 
-// Show отображает прогресс в реальном времени.
+// Show запускает периодический вывод прогресса выполнения.
 // Параметры:
-//   - items   – указатель на атомарный счётчик обработанных элементов
-//   - errors  – указатель на атомарный счётчик ошибок (может быть nil)
+//   - ctx    – контекст для управления завершением.
+//   - items  – указатель на атомарный счётчик обработанных элементов (не должен быть nil).
+//   - errors – указатель на атомарный счётчик ошибок (может быть nil, тогда ошибки не выводятся).
 func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 	ticker := time.NewTicker(b.Interval)
 	defer ticker.Stop()
 
-	// Буферизованный вывод снижает число системных вызовов.
-	bw := bufio.NewWriter(os.Stdout)
-	defer bw.Flush()
-
-	var (
-		prevItems uint64
-		prevTime  = time.Now()
-	)
+	prevItems := atomic.LoadUint64(items)
+	prevTime := time.Now()
 
 	// Выводим прогресс
 	for {
@@ -60,7 +54,7 @@ func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			b.print(bw, items, errors, prevItems, prevTime)
+			b.print(items, errors, prevItems, prevTime)
 			// обновляем предыдущие значения после вывода
 			prevItems = atomic.LoadUint64(items)
 			prevTime = time.Now()
@@ -69,7 +63,7 @@ func (b *Bar) Show(ctx context.Context, items, errors *uint64) {
 }
 
 // print формирует и выводит строку прогресса.
-func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, prevTime time.Time) {
+func (b *Bar) print(items, errors *uint64, prevItems uint64, prevTime time.Time) {
 	now := time.Now()
 	itms := atomic.LoadUint64(items)
 
@@ -77,13 +71,15 @@ func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, p
 
 	if b.Total > 0 {
 		percent := float64(itms) / float64(b.Total)
-		load := b.getLoad(percent)
-		line += fmt.Sprintf("%s %d / %d (%.1f%%)", load, itms, b.Total, percent*100)
+		if b.Length > 0 {
+			line += fmt.Sprintf("%s ", b.getLoad(percent))
+		}
+		line += fmt.Sprintf("%d / %d (%.1f%%)", itms, b.Total, percent*100)
 	} else {
 		line += fmt.Sprintf("%d", itms)
 	}
 
-	// Счётчики успехов и ошибок
+	// Счётчик ошибок
 	if errors != nil {
 		line += fmt.Sprintf(" | ❌ %d", atomic.LoadUint64(errors))
 	}
@@ -93,7 +89,7 @@ func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, p
 		elapsed := now.Sub(prevTime).Seconds()
 		if elapsed > 0 && itms > prevItems {
 			speed := float64(itms-prevItems) / elapsed
-			line += fmt.Sprintf(" | %.1f шт/с", speed)
+			line += fmt.Sprintf(" | %.1f it/s", speed)
 		}
 	}
 
@@ -112,8 +108,7 @@ func (b *Bar) print(bw *bufio.Writer, items, errors *uint64, prevItems uint64, p
 	// Очищаем текущую строку перед выводом, чтобы избежать артефактов.
 	line = "\033[2K" + line
 
-	fmt.Fprint(bw, line) // Запись в буферизованный writer.
-	bw.Flush()           // Немедленный вывод
+	fmt.Fprint(os.Stdout, line) // Запись в буферизованный writer.
 }
 
 func (b *Bar) getLoad(percent float64) string {

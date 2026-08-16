@@ -1,8 +1,6 @@
 package progress
 
 import (
-	"bufio"
-	"io"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -24,14 +22,11 @@ func BenchmarkPrintProgress(b *testing.B) {
 	prevItems := uint64(400)
 	prevTime := time.Now().Add(-time.Second) // симулируем разницу в 1 секунду
 
-	// Используем буферизованный writer, пишущий в /dev/null (io.Discard)
-	bw := bufio.NewWriter(io.Discard)
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Можно слегка изменять значения для большей реалистичности,
 		// но это не критично для бенчмарка.
-		bar.print(bw, &items, &errors, prevItems, prevTime)
+		bar.print(&items, &errors, prevItems, prevTime)
 	}
 }
 

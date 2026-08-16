@@ -1,7 +1,6 @@
 package progress
 
 import (
-	"bufio"
 	"bytes"
 	"sync/atomic"
 	"testing"
@@ -115,13 +114,9 @@ func TestPrintProgress(t *testing.T) {
 			atomic.StoreUint64(&errors, tt.errorsVal)
 
 			var buf bytes.Buffer
-			bw := bufio.NewWriter(&buf)
 
 			// Вызываем printProgress с подготовленными параметрами
-			tt.bar.print(bw, &items, &errors, tt.prevItems, tt.prevTime)
-
-			// Принудительный flush (printProgress уже вызывает Flush, но на всякий случай)
-			bw.Flush()
+			tt.bar.print(&items, &errors, tt.prevItems, tt.prevTime)
 
 			output := buf.String()
 
