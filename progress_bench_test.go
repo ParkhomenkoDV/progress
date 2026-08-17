@@ -1,32 +1,33 @@
 package progress
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 )
 
-// BenchmarkBarPrint замеряет производительность printProgress.
-// Использует io.Discard для исключения накладных расходов на реальный вывод.
-func BenchmarkBarPrint(b *testing.B) {
-	bar := &Bar{
-		Total:     1000,
-		ShowSpeed: true,
-		ShowETA:   true,
-	}
+func BenchmarkAdd(b *testing.B) {
+	bar := &Bar{}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			bar.Add(1)
+		}
+	})
+}
 
-	var items, errors uint64
-	atomic.StoreUint64(&items, 500)
-	atomic.StoreUint64(&errors, 50)
+func BenchmarkAddError(b *testing.B) {
+	bar := &Bar{}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			bar.AddError(1)
+		}
+	})
+}
 
-	prevItems := uint64(400)
-	prevTime := time.Now().Add(-time.Second) // симулируем разницу в 1 секунду
-
-	b.ResetTimer()
+func BenchmarkGetLoad(b *testing.B) {
+	bar := &Bar{Length: 50}
+	percent := 0.75
 	for i := 0; i < b.N; i++ {
-		// Можно слегка изменять значения для большей реалистичности,
-		// но это не критично для бенчмарка.
-		bar.print(&items, &errors, prevItems, prevTime)
+		bar.getLoad(percent)
 	}
 }
 
